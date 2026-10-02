@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pySigma-backend-libsigma"
+version = "0.1.0"
+description = "pySigma backend that compiles Sigma rules to a libsigma .sigmac artifact"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "LGPL-2.1-only"}
+authors = [{name = "Jérémie Jourdin"}]
+keywords = ["sigma", "libsigma", "siem", "detection"]
+dependencies = ["pysigma>=1.3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+libsigma-sigmac = "sigma.backends.libsigma.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/advens/pySigma-backend-libsigma"
+Repository = "https://github.com/advens/libsigma"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sigma*"]
+namespaces = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

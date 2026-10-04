@@ -10,8 +10,9 @@ will not match.
 ``ecs_pipeline()`` is that rename. It is logsource-gated: a ``process_creation``
 rule maps ``Image`` to ``process.executable``; a ``firewall`` rule maps
 ``src_ip`` to ``source.ip``. It does not decide whether a deployment actually
-produces the ECS field. A caller that already stores Sigma names leaves the
-pipeline off (``ecs=False``) and the compiler emits the names as written.
+produces the ECS field. A name with no row stays as written. A caller
+that already stores Sigma names leaves the pipeline off (``ecs=False``)
+and the compiler emits the names as written.
 
 Taxonomy (Sigma v2 ``taxonomy:``):
 
@@ -47,6 +48,7 @@ _NETWORK_CONNECTION = {
     "SourceIP": "source.ip", "DestinationIP": "destination.ip",
     "SourcePort": "source.port", "DestinationPort": "destination.port",
     "Protocol": "network.transport", "DestinationHostname": "destination.domain",
+    "SourceHostname": "source.domain",
     "Image": "process.executable", "CommandLine": "process.command_line",
     "ParentImage": "process.parent.executable", "User": "user.name",
 }
@@ -57,6 +59,13 @@ _PROCESS_CREATION = {
     "ParentImage": "process.parent.executable", "ParentCommandLine": "process.parent.command_line",
     "User": "user.name", "ProcessId": "process.pid", "ParentProcessId": "process.parent.pid",
     "IntegrityLevel": "process.integrity_level", "Hashes": "process.hash",
+    # PE metadata emitted for an endpoint process.
+    "Description": "process.pe.description",
+    "Product": "process.pe.product",
+    "Company": "process.pe.company",
+    "FileVersion": "process.pe.file_version",
+    "ProcessGuid": "process.entity_id",
+    "ParentProcessGuid": "process.parent.entity_id",
 }
 
 _WEBSERVER = {
@@ -148,7 +157,53 @@ _MAIL = {
     "RcptTo": "destination.user.email",
 }
 
-# category-gated maps (LogsourceCondition matches category OR product OR service)
+# File, image, and registry categories. A Sysmon spelling with no row
+# (Signed, Imphash, TargetImage, ScriptBlockText) stays written.
+# Initiated is not renamed: Sigma stores true/false and network.direction
+# is a word, so a rename alone would not match.
+_FILE_EVENT = {
+    "TargetFilename": "file.path",
+    "Image": "process.executable",
+    "CommandLine": "process.command_line",
+    "ParentImage": "process.parent.executable",
+    "User": "user.name",
+    "ProcessId": "process.pid",
+    "ProcessGuid": "process.entity_id",
+}
+
+_IMAGE_LOAD = {
+    "Image": "process.executable",
+    "ImageLoaded": "file.path",
+    "Product": "file.pe.product",
+    "Company": "file.pe.company",
+    "FileVersion": "file.pe.file_version",
+    "User": "user.name",
+    "ProcessId": "process.pid",
+    "ProcessGuid": "process.entity_id",
+}
+
+_REGISTRY = {
+    "TargetObject": "registry.path",
+    "Details": "registry.data.strings",
+    "Image": "process.executable",
+    "User": "user.name",
+    "ProcessId": "process.pid",
+    "ProcessGuid": "process.entity_id",
+}
+
+_PROCESS_ACCESS = {
+    "SourceImage": "process.executable",
+    "SourceProcessId": "process.pid",
+    "User": "user.name",
+}
+
+_PIPE = {
+    "PipeName": "file.name",
+    "Image": "process.executable",
+}
+
+# A category condition matches that category only. Product and service are
+# separate conditions below.
 _MAPS = {
     "firewall": _FIREWALL,
     "network_connection": _NETWORK_CONNECTION,
@@ -158,6 +213,21 @@ _MAPS = {
     "dns": _DNS,
     "dns_query": _DNS,
     "authentication": _LINUX_AUTH,
+    "file_event": _FILE_EVENT,
+    "file_delete": _FILE_EVENT,
+    "file_change": _FILE_EVENT,
+    "file_delete_detected": _FILE_EVENT,
+    "create_stream_hash": _FILE_EVENT,
+    "image_load": _IMAGE_LOAD,
+    "driver_load": _IMAGE_LOAD,
+    "registry_event": _REGISTRY,
+    "registry_add": _REGISTRY,
+    "registry_delete": _REGISTRY,
+    "registry_set": _REGISTRY,
+    "registry_rename": _REGISTRY,
+    "process_access": _PROCESS_ACCESS,
+    "create_remote_thread": _PROCESS_ACCESS,
+    "pipe_created": _PIPE,
 }
 
 # service-gated maps: SigmaHQ ships SSH/auth rules under logsource.service
@@ -171,12 +241,78 @@ _SERVICE_MAPS = {
     "mail": _MAIL,
 }
 
+# Windows Security channel. Subject* is the actor. TargetUserName stays
+# written: ECS has one user.name, and folding the target into it would
+# compare the rule to the wrong account. ServiceFileName and ObjectName
+# have no row.
+_WINDOWS_SECURITY = {
+    "EventID": "event.code",
+    "ComputerName": "host.name",
+    "SubjectUserName": "user.name",
+    "SubjectDomainName": "user.domain",
+    "SubjectUserSid": "user.id",
+    "ProcessName": "process.executable",
+    "NewProcessName": "process.executable",
+    "ParentProcessName": "process.parent.name",
+    "CommandLine": "process.command_line",
+    "IpAddress": "source.ip",
+    "IpPort": "source.port",
+    "WorkstationName": "source.domain",
+    "Application": "process.executable",
+    "ServiceName": "service.name",
+}
+
+_WINDOWS_EVENT = {
+    "EventID": "event.code",
+    "ComputerName": "host.name",
+}
+
+# CloudTrail field names.
+_CLOUDTRAIL = {
+    "eventName": "event.action",
+    "eventSource": "event.provider",
+    "sourceIPAddress": "source.ip",
+    "userAgent": "user_agent.original",
+}
+
+# Azure AD audit names. Activity logs keep operationName: that source
+# writes a vendor field, not event.action.
+_AZURE_AUDIT = {
+    "operationName": "event.action",
+    "OperationName": "event.action",
+}
+
+# auditd exe and comm. a0, SYSCALL, and type have no row.
+_AUDITD = {
+    "exe": "process.executable",
+    "comm": "process.name",
+}
+
+# (product, service, mapping). Both tokens are required, so a linux rule
+# does not pick up the Windows Security table.
+_PRODUCT_SERVICE_MAPS = (
+    ("windows", "security", _WINDOWS_SECURITY),
+    ("windows", "system", _WINDOWS_EVENT),
+    ("windows", "application", _WINDOWS_EVENT),
+    ("aws", "cloudtrail", _CLOUDTRAIL),
+    ("azure", "auditlogs", _AZURE_AUDIT),
+    ("linux", "auditd", _AUDITD),
+)
+
+
+def _all_maps():
+    """Every field table the pipeline installs, category then service then product."""
+    yield from _MAPS.values()
+    yield from _SERVICE_MAPS.values()
+    yield _LINUX
+    for _product, _service, mapping in _PRODUCT_SERVICE_MAPS:
+        yield mapping
+
+
 # Sigma-side names the maps consume. Used to tell an ecs-taxonomy rule that
 # leaked a Sigma spelling (``dst_ip``) from a field we simply do not have.
 SIGMA_FIELD_NAMES: frozenset[str] = frozenset(
-    key
-    for mapping in (*_MAPS.values(), *_SERVICE_MAPS.values(), _LINUX)
-    for key in mapping
+    key for mapping in _all_maps() for key in mapping
 )
 
 
@@ -256,6 +392,14 @@ def ecs_pipeline() -> ProcessingPipeline:
             rule_conditions=[LogsourceCondition(product="linux")],
         )
     )
+    items.extend(
+        ProcessingItem(
+            identifier=f"libsigma_ecs_{product}_{service}",
+            transformation=FieldMappingTransformation(mapping),
+            rule_conditions=[LogsourceCondition(product=product, service=service)],
+        )
+        for product, service, mapping in _PRODUCT_SERVICE_MAPS
+    )
     return ProcessingPipeline(name="libsigma-ecs", priority=20, items=items)
 
 
@@ -268,7 +412,7 @@ def corr_field_to_ecs(name: str, *, map_fields: bool = True) -> str:
     """
     if not name or not map_fields:
         return name
-    for mapping in (*_MAPS.values(), *_SERVICE_MAPS.values(), _LINUX):
+    for mapping in _all_maps():
         mapped = mapping.get(name)
         if mapped:
             return mapped

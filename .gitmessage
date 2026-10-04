@@ -1,0 +1,15 @@
+# <type>(<scope>): <subject>
+#
+# Types:  feat fix perf refactor test build ci docs chore
+# Scopes: backend format corr pipeline cli build github docs
+# Subject: imperative, ASCII, no period, first line <= 72 chars
+#
+# Why:
+#
+# Proof:
+# not run:
+#
+# Contract: none
+#
+# Delete this comment block. The hook rejects a message that still
+# contains a line starting with "#".

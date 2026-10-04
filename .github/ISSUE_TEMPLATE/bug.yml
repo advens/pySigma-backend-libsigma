@@ -1,0 +1,33 @@
+name: Bug
+description: A rule compiled to the wrong artifact, or a rule that should compile did not
+title: "fix(<scope>): "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Scope in the title must be one of
+        `backend` `format` `corr` `pipeline` `cli` `build`.
+        The `.sigmac` layout is specified by libsigma. Do not ask this
+        repository to invent a format version.
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: Sigma rule
+      description: The smallest rule that shows the bug. No private logs.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Observed vs expected.
+    validations:
+      required: true

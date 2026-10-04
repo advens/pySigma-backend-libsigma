@@ -1,0 +1,11 @@
+# Release archives are the Python package. The commit harness stays in
+# git and is omitted from `git archive`.
+/.githooks/      export-ignore
+/.github/        export-ignore
+/.gitignore      export-ignore
+/.gitmessage     export-ignore
+/.gitattributes  export-ignore
+/docs/           export-ignore
+/scripts/        export-ignore
+/CONTRIBUTING.md export-ignore
+/SECURITY.md     export-ignore

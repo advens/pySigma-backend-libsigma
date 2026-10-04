@@ -49,6 +49,12 @@ Those are two different steps, and only the first one lives here.
 | `category: firewall` | `src_ip` | `source.ip` |
 | `category: dns` or `dns_query` | `QueryName`, `query` | `dns.question.name` |
 | `service: sshd` | `User` | `user.name` |
+| `category: file_event` | `TargetFilename` | `file.path` |
+| `category: registry_set` | `TargetObject` | `registry.path` |
+| `category: image_load` | `ImageLoaded` | `file.path` |
+| `product: windows`, `service: security` | `EventID` | `event.code` |
+| `product: aws`, `service: cloudtrail` | `eventName` | `event.action` |
+| `product: linux`, `service: auditd` | `exe` | `process.executable` |
 
 A rule marked `taxonomy: ecs` is already written with the names the callback returns, so the table is not applied. `Image` in an `ecs` rule stays `Image`. `libsigma-sigmac --no-ecs` (or `LibsigmaBackend(ecs=False)`) does the same for every rule: the name in the YAML is the name in the artifact.
 

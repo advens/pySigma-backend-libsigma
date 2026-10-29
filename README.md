@@ -58,7 +58,7 @@ Those are two different steps, and only the first one lives here.
 
 A rule marked `taxonomy: ecs` is already written with the names the callback returns, so the table is not applied. `Image` in an `ecs` rule stays `Image`. `libsigma-sigmac --no-ecs` (or `LibsigmaBackend(ecs=False)`) does the same for every rule: the name in the YAML is the name in the artifact.
 
-The same tables are installed as the pySigma pipeline `ecs` (`sigma.pipelines.libsigma`) for a caller that wants the rename without this backend.
+The same tables are installed as the pySigma pipeline `libsigma_ecs` (`sigma.pipelines.libsigma`) for a caller that wants the rename without this backend.
 
 **After the rename.** Every remaining name is compiled. A name with no table row is written as it appears (`CustomVendorField` stays `CustomVendorField`). Whether a deployment's parsers produce that field is a second decision, made by the caller. `compile_rules(..., gate=...)` can return a drop reason after the rename. `convert()` has no such gate: filter the collection first, or call `compile_rules` directly.
 

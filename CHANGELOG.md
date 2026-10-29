@@ -8,3 +8,4 @@
   `--no-ecs` compile field names as written.
 - The rename tables are also the pySigma pipeline `libsigma_ecs`.
 - No deployment field allowlist. Callers drop rules they cannot match.
+- Supports pySigma 1.3 and later 1.x, and 2.x. CI runs both lines.

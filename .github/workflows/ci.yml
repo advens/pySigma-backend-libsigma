@@ -47,7 +47,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      # Both pySigma lines run in one job so the job names stay the ones
+      # the main ruleset requires. 2.x is the current line. 1.x stays until
+      # WAKE, which vendors this package, can install 2.x on FreeBSD 3.14t.
       - name: test
         run: |
           python -m pip install -e '.[dev]'
-          python -m pytest -q
+          for spec in "~=2.0" "~=1.5"; do
+            python -m pip install "pysigma${spec}"
+            python -c 'import importlib.metadata as m; print("pysigma", m.version("pysigma"))'
+            python -m pytest -q
+          done

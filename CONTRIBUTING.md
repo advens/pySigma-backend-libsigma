@@ -38,6 +38,13 @@ published header.
 
 ## Releasing
 
-Tag `N.N.N`. The release workflow runs the tests, builds an sdist and
-a wheel, and attaches them to the GitHub release. PyPI publishing is
-a separate step.
+Set `version` in `pyproject.toml`, add the `CHANGELOG.md` section,
+then tag `N.N.N` on `main`. The release workflow refuses a tag that
+differs from `version`. It runs the tests, builds an sdist and a
+wheel, publishes them to PyPI, then attaches them to the GitHub
+release.
+
+PyPI publishing uses trusted publishing from the `pypi` environment.
+There is no API token in the repository settings. The PyPI project
+trusts owner `advens`, repository `pySigma-backend-libsigma`,
+workflow `release.yml`, environment `pypi`.

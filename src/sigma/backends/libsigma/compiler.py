@@ -62,6 +62,7 @@ from sigma.types import (
     SigmaRegularExpression,
     SigmaNull,
     SigmaExists,
+    SigmaBool,
 )
 
 # |cased and |fieldref support. Guarded so an older pySigma without either type
@@ -1002,12 +1003,24 @@ def _emit_keyword(b: SigmaDbBuilder, val) -> None:
         b.pred(EVENT_ORIGINAL, op, value_id=b.value(operand))
     elif isinstance(val, SigmaNumber):
         b.pred(EVENT_ORIGINAL, Op.CONTAINS, value_id=b.value(str(val.number)))
+    elif isinstance(val, SigmaRegularExpression):
+        # A fieldless |re searches the raw line with the field |re semantics:
+        # case-sensitive unless |i, |m and |s as inline flags.
+        names = {getattr(f, "name", "") for f in (getattr(val, "flags", None) or ())}
+        pat = str(val.regexp)
+        inline = "".join(c for c, n in (("m", "MULTILINE"), ("s", "DOTALL")) if n in names)
+        if inline:
+            pat = f"(?{inline})" + pat
+        flags = 0 if "IGNORECASE" in names else PF_CASE
+        b.pred(EVENT_ORIGINAL, Op.RE, value_id=b.value(pat), flags=flags)
     else:
         raise CompileError(f"unsupported keyword value {type(val).__name__}")
 
 
 def _keyword_needle(val) -> "str | None":
     """The sound prefilter needle for a keyword value (see _value_needle)."""
+    if isinstance(val, SigmaRegularExpression):
+        return _regex_anchor(str(val.regexp))
     if not isinstance(val, SigmaString):
         return None
     op, operand = _keyword_op(val)
@@ -1080,6 +1093,11 @@ def _emit_leaf(b: SigmaDbBuilder, node: ConditionFieldEqualsValueExpression) -> 
         b.pred(fld, Op.EXISTS, flags=0 if val.exists else PF_NEGATE)
     elif isinstance(val, SigmaNull):
         b.pred(fld, Op.EXISTS, flags=PF_NEGATE)               # field is null => not exists
+    elif isinstance(val, SigmaBool):
+        # An unquoted YAML true/false. The runtime sees a JSON boolean as the
+        # text "true" or "false"; an event that carries it as a string may
+        # write "True". Case-insensitive equality matches both.
+        b.pred(fld, Op.EQ, value_id=b.value("true" if val.boolean else "false"))
     elif isinstance(val, SigmaCIDRExpression):
         net = val.network
         fam = 4 if net.version == 4 else 6

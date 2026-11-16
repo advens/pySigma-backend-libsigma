@@ -309,3 +309,46 @@ detection:
     assert res.sidecar == {}
     assert res.errors
     assert "edge" in res.errors[0]["error"]
+
+
+def test_boolean_value_compiles_to_text_equality():
+    """`Signed: true` is a SigmaBool. It used to drop the rule."""
+    res = compile_rules("""
+title: Boolean field
+id: aaaaaaaa-0000-0000-0000-000000000003
+logsource:
+  category: image_load
+  product: windows
+detection:
+  sel:
+    ImageLoaded|endswith: '\\vcruntime140.dll'
+  signed:
+    Signed: true
+  unsigned:
+    Initiated: false
+  condition: sel and signed and not unsigned
+""")
+    assert res.errors == []
+    assert res.dropped == []
+    assert b"true" in res.artifact
+    assert b"false" in res.artifact
+
+
+def test_keyword_regex_compiles():
+    """A fieldless `|re` searches the raw line. It used to drop the rule."""
+    res = compile_rules("""
+title: Keyword regex
+id: aaaaaaaa-0000-0000-0000-000000000004
+logsource:
+  product: windows
+  service: application
+detection:
+  keywords_plain:
+    - 'Cobalt'
+  keywords_re:
+    '|re': '\\bHKTL\\b'
+  condition: 1 of keywords_*
+""")
+    assert res.errors == []
+    assert res.dropped == []
+    assert b"\\bHKTL\\b" in res.artifact

@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+- A boolean value (`Signed: true`) compiles to a case-insensitive
+  equality on `true` or `false`. It used to drop the rule with
+  "unsupported value type SigmaBool".
+- A fieldless `|re` keyword compiles to a regex over `event.original`,
+  case-sensitive unless `|i`. It used to drop the rule.
+
 ## [0.1.0]
 
 - First public backend. Sigma YAML to a libsigma `.sigmac` v5 artifact

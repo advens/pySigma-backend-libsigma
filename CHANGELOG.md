@@ -1,6 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.1]
+
+PATCH: two value types no longer drop the rule. No `.sigmac` or
+`rules.corr.json` change.
 
 - A boolean value (`Signed: true`) compiles to a case-insensitive
   equality on `true` or `false`. It used to drop the rule with

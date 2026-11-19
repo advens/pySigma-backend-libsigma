@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+MINOR: two `libsigma-sigmac` options. No `.sigmac` or `rules.corr.json`
+change.
+
+- `--fields FILE` drops a rule that reads a field the file does not
+  list, and limits correlation group-by fields to the list. A line
+  `prefix.*` accepts every field under that prefix.
+- `--placeholders FILE` reads `|expand` values from a YAML or JSON
+  mapping.
+
 ## [0.1.1]
 
 PATCH: two value types no longer drop the rule. No `.sigmac` or

@@ -16,6 +16,8 @@ pip install pySigma-backend-libsigma
 libsigma-sigmac rules/ -o rules.sigmac --corr rules.corr.json
 ```
 
+`--fields fields.txt` lists the event fields a deployment produces, one per line, after the ECS rename. `#` starts a comment, and `labels.*` accepts any field under `labels.`. A rule that reads any other field is dropped with a reason, and a correlation can group only by a listed field. `--placeholders values.yml` maps `|expand` placeholder names to a string or a list. A placeholder with no value is an error on that rule.
+
 From Python:
 
 ```python

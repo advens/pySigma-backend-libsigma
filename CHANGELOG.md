@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.2.0]
 
 MINOR: two `libsigma-sigmac` options. No `.sigmac` or `rules.corr.json`
 change.

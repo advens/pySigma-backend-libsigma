@@ -1,0 +1,102 @@
+# Correlations for the libsigma load check in CI: one of each
+# standard type, and group-by aliases across two base rules.
+title: ssh failure
+name: ssh_failure
+id: 6f0c2d4e-1a2b-4c3d-8e9f-000000000001
+status: test
+logsource: {product: linux, service: sshd}
+detection:
+  sel:
+    Message|contains: 'Failed password'
+  condition: sel
+level: low
+---
+title: windows logon failure
+name: win_failure
+id: 6f0c2d4e-1a2b-4c3d-8e9f-000000000002
+status: test
+logsource: {product: windows, service: security}
+detection:
+  sel:
+    EventID: 4625
+  condition: sel
+level: low
+---
+title: large outbound transfer
+name: big_transfer
+id: 6f0c2d4e-1a2b-4c3d-8e9f-000000000003
+status: test
+logsource: {category: firewall}
+detection:
+  sel:
+    action: allow
+  condition: sel
+level: low
+---
+title: login failures across sources
+name: failures_by_host
+status: test
+correlation:
+  type: event_count
+  rules: [ssh_failure, win_failure]
+  aliases:
+    host:
+      ssh_failure: SourceIp
+      win_failure: IpAddress
+  group-by: [host]
+  timespan: 10m
+  condition: {gte: 10}
+level: medium
+---
+title: users tried from one source
+name: spray
+status: test
+correlation:
+  type: value_count
+  rules: [ssh_failure]
+  group-by: [SourceIp]
+  timespan: 10m
+  condition: {field: User, gte: 5}
+level: medium
+---
+title: failures on both systems
+name: both_systems
+status: test
+correlation:
+  type: temporal
+  rules: [ssh_failure, win_failure]
+  group-by: [User]
+  timespan: 5m
+level: medium
+---
+title: windows then ssh
+name: win_then_ssh
+status: test
+correlation:
+  type: temporal_ordered
+  rules: [win_failure, ssh_failure]
+  group-by: [User]
+  timespan: 5m
+level: medium
+---
+title: bytes out per source
+name: bytes_out
+status: test
+correlation:
+  type: value_sum
+  rules: [big_transfer]
+  group-by: [src_ip]
+  timespan: 1h
+  condition: {field: dst_bytes, gte: 1000000000}
+level: medium
+---
+title: average transfer size
+name: avg_out
+status: test
+correlation:
+  type: value_avg
+  rules: [big_transfer]
+  group-by: [src_ip]
+  timespan: 1h
+  condition: {field: dst_bytes, gte: 10000000}
+level: low

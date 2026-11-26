@@ -58,3 +58,47 @@ jobs:
             python -c 'import importlib.metadata as m; print("pysigma", m.version("pysigma"))'
             python -m pytest -q
           done
+
+  # Load what this package compiles into libsigma's own loader. The
+  # tests here check bytes against the format spec; this job checks that
+  # the released matcher accepts them. SigmaHQ covers the rule shapes,
+  # tests/fixtures/libsigma-load the correlation types and aliases.
+  libsigma-load:
+    runs-on: ubuntu-latest
+    env:
+      LIBSIGMA_REF: 4.2.0
+      SIGMAHQ_COMMIT: 19aee0af973becc96465791d9401272ca2841bf1 # r2026-07-01
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcre2-dev libfastjson-dev
+      - name: libsigma sigma_cli
+        run: |
+          set -eu
+          src="$RUNNER_TEMP/libsigma"
+          git init -q "$src"
+          git -C "$src" fetch -q --depth 1 https://github.com/advens/libsigma.git "refs/tags/$LIBSIGMA_REF"
+          git -C "$src" checkout -q FETCH_HEAD
+          make -C "$src" cli
+          echo "SIGMA_CLI=$src/build/sigma_cli" >> "$GITHUB_ENV"
+      - name: SigmaHQ rules
+        run: |
+          set -eu
+          git init -q "$RUNNER_TEMP/sigmahq"
+          git -C "$RUNNER_TEMP/sigmahq" fetch -q --depth 1 https://github.com/SigmaHQ/sigma.git "$SIGMAHQ_COMMIT"
+          git -C "$RUNNER_TEMP/sigmahq" checkout -q FETCH_HEAD
+      - name: compile and load
+        run: |
+          set -eu
+          python -m pip install -e .
+          out="$RUNNER_TEMP/out"
+          mkdir -p "$out"
+          hq="$RUNNER_TEMP/sigmahq"
+          libsigma-sigmac "$hq/rules" "$hq/rules-emerging-threats" "$hq/rules-threat-hunting" \
+            -o "$out/sigmahq.sigmac" --corr "$out/sigmahq.corr.json"
+          "$SIGMA_CLI" "$out/sigmahq.sigmac" < /dev/null
+          libsigma-sigmac tests/fixtures/libsigma-load -o "$out/fixture.sigmac" --corr "$out/fixture.corr.json"
+          "$SIGMA_CLI" "$out/fixture.sigmac" "$out/fixture.corr.json" < /dev/null
